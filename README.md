@@ -1,1 +1,1 @@
-# eb2016, második próba
+# eb2016 - initial commit
