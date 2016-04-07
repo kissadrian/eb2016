@@ -1,0 +1,92 @@
+<?php
+/**
+ * @file
+ * Functions for the EB2016 module
+ */
+
+/**
+ * Implements hook_help().
+ * 
+ * Displays help and module information.
+ *
+ * @param path 
+ *   Which path of the site we're using to display help
+ * @param arg 
+ *   Array that holds the current path as returned from arg() function
+ */
+function eb2016_help($path, $arg) {
+  switch ($path) {
+    case "admin/help#eb2016":
+      return '<p>' . t("Az EB2016 site működésével kapcsolatos információk.") . '</p>';
+      break;
+  }
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function eb2016_block_info() {
+  $blocks['eb2016'] = array(
+    'info' => t('EB2016'), // The name that will appear in the block list.  
+    'cache' => DRUPAL_CACHE_PER_ROLE, // Default setting.
+  );
+
+  return $blocks;  
+}
+
+/**
+ * Custom content function. 
+ * 
+ * Set beginning and end dates, retrieve posts from database
+ * saved in that time period.
+ * 
+ * @return 
+ *   A result set of the targeted posts.
+ */
+function eb2016_contents(){
+  $today = getdate(); //Get today's date.
+  $start_time = mktime(0, 0, 0,$today['mon'],($today['mday'] - 14), $today['year']); //Calculate the date a week ago.
+  $end_time = time(); //Get all posts from one week ago to the present.
+  
+//  firep(date('Y-m-d', $start_time)); 
+//  firep(date('Y-m-d', $end_time));
+  
+  $query = db_select('node', 'n') //Use Database API to retrieve current posts.
+    ->fields('n', array('nid', 'title', 'created'))
+    ->condition('status', 1) //Published.
+//    ->condition('created', array($start_time, $end_time), 'BETWEEN')
+    ->orderBy('created', 'DESC') //Most recent first.
+    ->execute(); 
+
+  
+//  dpm($query);
+//  dpm($query->arguments());
+
+  return $query;  
+}
+
+function eb2016_block_view($delta = '') {
+  switch ($delta) {
+    case 'eb2016':
+      $block['subject'] = t('EB2016 tartalom');
+
+      if (user_access('access content')) { // Retrieve and process data here
+        $result = eb2016_contents(); // Use our custom function to retrieve data.
+        $items = array(); // Array to contain items for the block to render.
+        foreach ($result as $node) {
+          $items[] = array(
+            'data' => l($node->title, 'node/' . $node->nid),
+          );
+        }
+        
+        if (empty($items)) { // No content in the last week.
+          $block['content'] = t('Nincs megjeleníthető tartalom.');
+        }
+        else {
+          $block['content'] = theme('item_list', array('items' => $items));
+        }
+      }
+
+      return $block;
+  }
+} 
